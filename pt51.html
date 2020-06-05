@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>パート LI. std::optional （ C++17 ）</title><link rel="stylesheet" type="text/css" href="index.css" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="home" href="index.html" title="C++ プログラミング" /><link rel="up" href="index.html" title="C++ プログラミング" /><link rel="prev" href="ch331.html" title="第331章 可変長引数はどうなるか？" /><link rel="next" href="ch332.html" title="第332章 has_value メンバー関数" /><meta xmlns="" name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0" /><script xmlns="" type="text/javascript" src="prettify/prettify.js"></script><link xmlns="" rel="stylesheet" type="text/css" href="prettify/skins/sons-of-obsidian.css" /><script xmlns="">
+    window.addEventListener("load", function() {
+      PR.prettyPrint();
+	  });	
+	</script><script xmlns="" type="text/javascript" src="script/head.js"></script></head><body><div class="navheader"><table width="100%" summary="Navigation header"><tr><td width="20%" align="left"><a accesskey="p" href="ch331.html">戻る</a> </td><th width="60%" align="center"> </th><td width="20%" align="right"> <a accesskey="n" href="ch332.html">次へ</a></td></tr></table><hr /></div><div class="part"><div class="titlepage"><div><div><h1 class="title"><a id="std_optional"></a>パート LI. std::optional （ C++17 ）</h1></div></div></div><div class="toc"><p><strong>目次</strong></p><dl class="toc"><dt><span class="chapter"><a href="ch332.html">332. has_value メンバー関数</a></span></dt><dt><span class="chapter"><a href="ch333.html">333. std::optional を使った関数オブジェクトのバインド</a></span></dt></dl></div><p>std::optional は C++17 から導入されたコンテナです。</p><p>コンテナ内にデータがあるか無いか分からないときに使うことを念頭としています。</p><p>std::optional&lt;T&gt; は T 型『または』空のクラス・型を保持します。</p><p>この空のクラス・型は std::nullopt_t という型として定義できます。</p><p>具体的には以下2つのいずれかとなります。</p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+{ }
+</li><li class="listitem">
+std::nullopt
+</li></ul></div><p>関数の戻り値が std::nullopt_t 型のオブジェクトになるようにしておけば、関数が失敗するような場合でもフェイルセーフに処理ができます。</p><p>例えば関数が通常返すデータが文字列だとして、データが未初期であれば { } や std::nullopt として戻すという前提で考えると、コール側ではそのための処理を設計する必要がないのは大きな利点です。</p><div class="variablelist"><dl class="variablelist"><dt><span class="term">
+value 関数
+</span></dt><dd>
+std::optional の値を取得する。値が空の場合は例外（ std::bad_optional_access ）を投げる
+</dd><dt><span class="term">
+value_or 関数
+</span></dt><dd>
+std::optional の値を取得する。値が空の場合のデフォルト値も設定する。
+</dd></dl></div><p>value_or 関数の宣言については以下のようになります。</p><pre xmlns="" class="prettyprint">template&lt; class U &gt;
+constexpr T value_or( U&amp;&amp; default_value ) const&amp;;</pre><p>default_value に適当な値を設定できます。</p><p>default_value に設定した値は std::optional オブジェクトの値が空の場合に使われます。</p><p>では簡単な例を考えてみましょうかね。</p><p><strong>main.cpp. </strong>
+</p><pre xmlns="" class="prettyprint">  1 #if __cplusplus != 201703L
+  2 # pragma message "-std=c++17を指定してください"
+  3 #endif
+  4
+  5 #include &lt;optional&gt;
+  6 #include &lt;iostream&gt;
+  7
+  8 std::optional&lt;std::string_view&gt; ret_string()
+  9 {
+ 10   return std::string_view("Hello");
+ 11 }
+ 12
+ 13 std::optional&lt;std::string_view&gt; ret_null()
+ 14 {
+ 15   return std::nullopt;
+ 16 }
+ 17
+ 18 int main()
+ 19 {
+ 20   std::cout &lt;&lt; ret_string().value_or("no return") &lt;&lt; '\n';
+ 21   std::cout &lt;&lt; ret_null().value_or("no return") &lt;&lt; '\n';
+ 22   std::cout &lt;&lt; ret_string().value() &lt;&lt; " World!"&lt;&lt; '\n';
+ 23   return 0;
+ 24 }</pre><p>
+</p><p>これをビルドすると以下のようになります。</p><pre xmlns="" class="prettyprint">$ g++ main.cpp -std=c++17
+$ ./a.out
+Hello
+no return
+Hello World!</pre><p>ret_string 関数は string_view を戻し、 ret_null 関数は空の型データを返します。</p><pre xmlns="" class="prettyprint">  8 std::optional&lt;std::string_view&gt; ret_string()
+  9 {
+ 10   return std::string_view("Hello");
+ 11 }
+ 12
+ 13 std::optional&lt;std::string_view&gt; ret_null()
+ 14 {
+ 15   return std::nullopt;
+ 16 }</pre><p>もちろんこんな風に関数を2つに分ける事は実際の開発では行いませんが、何かあったら std::nullopt や { } を返せば良いというのは便利です。</p></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch331.html">戻る</a> </td><td width="20%" align="center"> </td><td width="40%" align="right"> <a accesskey="n" href="ch332.html">次へ</a></td></tr><tr><td width="40%" align="left" valign="top"> </td><td width="20%" align="center"><a accesskey="h" href="index.html">ホーム</a></td><td width="40%" align="right" valign="top"> </td></tr></table></div><wrapper xmlns=""><p>Copyright 2017-2018, by Masaki Komatsu</p>
+
+</wrapper></body></html>

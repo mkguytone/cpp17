@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>パート LII. std::invoke ( C++17 )</title><link rel="stylesheet" type="text/css" href="index.css" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="home" href="index.html" title="C++ プログラミング" /><link rel="up" href="index.html" title="C++ プログラミング" /><link rel="prev" href="ch333.html" title="第333章 std::optional を使った関数オブジェクトのバインド" /><link rel="next" href="ch334.html" title="第334章 std::optional との合わせ技" /><meta xmlns="" name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0" /><script xmlns="" type="text/javascript" src="prettify/prettify.js"></script><link xmlns="" rel="stylesheet" type="text/css" href="prettify/skins/sons-of-obsidian.css" /><script xmlns="">
+    window.addEventListener("load", function() {
+      PR.prettyPrint();
+	  });	
+	</script><script xmlns="" type="text/javascript" src="script/head.js"></script></head><body><div class="navheader"><table width="100%" summary="Navigation header"><tr><td width="20%" align="left"><a accesskey="p" href="ch333.html">戻る</a> </td><th width="60%" align="center"> </th><td width="20%" align="right"> <a accesskey="n" href="ch334.html">次へ</a></td></tr></table><hr /></div><div class="part"><div class="titlepage"><div><div><h1 class="title"><a id="std_invoke"></a>パート LII. std::invoke ( C++17 )</h1></div></div></div><div class="toc"><p><strong>目次</strong></p><dl class="toc"><dt><span class="chapter"><a href="ch334.html">334. std::optional との合わせ技</a></span></dt></dl></div><p>std::invoke は呼び出し可能なオブジェクトを実行する関数です。</p><p>クラスメンバー関数の呼び出しを少しだけ使いやすくしてくれる関数というのが筆者の理解です。</p><pre xmlns="" class="prettyprint">//&lt;functional&gt;
+template&lt; class F, class... Args&gt;
+std::invoke_result_t&lt;F, Args...&gt; invoke(F&amp;&amp; f, Args&amp;&amp;... args) noexcept</pre><p>f が Callable なオブジェクトであれば args を引数として実行します。</p><p>コーラブルオブジェクトの抽象化をしてるわけですが、設計上 f を固定したくないなら使えそうですね。</p><p>戻り値型の std::invoke_result_t は呼び出し結果の型となり std::invoke_result というクラステンプレートの型にしたものです。</p><p>では簡単な実装例を見てみましょう。</p><div class="note" style="margin-left: 0; margin-right: 10%;"><h3 class="title">注記</h3><p>マクロについては <a class="link" href="ch36.html" title="第36章 クロスコンパイルのための組み込みマクロ">クロスコンパイルのための組み込みマクロ</a> を参照くださいね。</p></div><p><strong>main.cpp. </strong>
+</p><pre xmlns="" class="prettyprint">  1 #if __cplusplus &lt; 201703L
+  2 # pragma message "-std=c++17を指定してください"
+  3 #endif
+  4
+  5 #include &lt;functional&gt; //invoke
+  6 #include &lt;tuple&gt;
+  7 #include &lt;iostream&gt;
+  8
+  9 int foo(int x, int y) {
+ 10   return x + y;
+ 11 }
+ 12
+ 13 int main()
+ 14 {
+ 15   auto invoke_result = std::invoke(foo,10,2);
+ 16   std::cout &lt;&lt; invoke_result &lt;&lt; '\n';
+ 17
+ 18   return 0;
+ 19 }</pre><p>
+</p><p><strong>ビルドと実行. </strong>
+</p><pre xmlns="" class="prettyprint">$ g++ main.cpp -std=c++17
+$ ./a.out
+12</pre><p>
+</p><p>std::invoke が関数 foo を呼び出してるのがわかるかと思います。</p><pre xmlns="" class="prettyprint"> 15   auto invoke_result = std::invoke(foo,10,2);</pre><p>この行では 10 と 2 は foo の引数となります。</p><p>まあこの辺は特に難しないですね。</p><p>ではメンバー関数の呼び出しに使うとどうでしょうかね？</p><p><strong>main.cpp. </strong>
+</p><pre xmlns="" class="prettyprint">  1 #if __cplusplus &lt; 201703L
+  2 # pragma message "-std=c++17を指定してください"
+  3 #endif
+  4
+  5
+  6 #include &lt;functional&gt; //invoke
+  7 #include &lt;tuple&gt;
+  8 #include &lt;iostream&gt;
+  9
+ 10 struct Foo {
+ 11   int print(int x, int y)
+ 12   {
+ 13     return x + y;
+ 14   }
+ 15 };
+ 16
+ 17 int main()
+ 18 {
+ 19   Foo foo;
+ 20   auto invoke_result = std::invoke(&amp;Foo::print,foo,10,2);
+ 21   std::cout &lt;&lt; invoke_result &lt;&lt; '\n';
+ 22
+ 23   return 0;
+ 24 }</pre><p>
+</p><p><strong>ビルドと実行. </strong>
+</p><pre xmlns="" class="prettyprint">$ g++ main.cpp -std=c++17
+$ ./a.out
+12</pre><p>
+</p><p>この例を見てもらうと第一引数にメンバー関数、第二引数にオブジェクトを指定するだけです。</p></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch333.html">戻る</a> </td><td width="20%" align="center"> </td><td width="40%" align="right"> <a accesskey="n" href="ch334.html">次へ</a></td></tr><tr><td width="40%" align="left" valign="top"> </td><td width="20%" align="center"><a accesskey="h" href="index.html">ホーム</a></td><td width="40%" align="right" valign="top"> </td></tr></table></div><wrapper xmlns=""><p>Copyright 2017-2018, by Masaki Komatsu</p>
+
+</wrapper></body></html>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>第321章 範囲 for ループ</title><link rel="stylesheet" type="text/css" href="index.css" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="home" href="index.html" title="C++ プログラミング" /><link rel="up" href="pt49.html" title="パート XLIX. 構造化束縛 ( C++17 )" /><link rel="prev" href="ch320.html" title="第320章 クラスにおける制約" /><link rel="next" href="pt50.html" title="パート L. テンプレートの型推論 ( C++17 )" /><meta xmlns="" name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0" /><script xmlns="" type="text/javascript" src="prettify/prettify.js"></script><link xmlns="" rel="stylesheet" type="text/css" href="prettify/skins/sons-of-obsidian.css" /><script xmlns="">
+    window.addEventListener("load", function() {
+      PR.prettyPrint();
+	  });	
+	</script><script xmlns="" type="text/javascript" src="script/head.js"></script></head><body><div class="navheader"><table width="100%" summary="Navigation header"><tr><td width="20%" align="left"><a accesskey="p" href="ch320.html">戻る</a> </td><th width="60%" align="center"> </th><td width="20%" align="right"> <a accesskey="n" href="pt50.html">次へ</a></td></tr></table><hr /></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a id="_範囲_for_ループ"></a>第321章 範囲 for ループ</h2></div></div></div><p>構造化束縛の機能の一つとして範囲 for ループへの適用があります。</p><p>まあ、考え方としては範囲 for ループ内で構造体を展開する機能って感じですかね。</p><p>ではソースコードを見てみましょう。</p><div class="note" style="margin-left: 0; margin-right: 10%;"><h3 class="title">注記</h3><p>マクロについては <a class="link" href="ch36.html" title="第36章 クロスコンパイルのための組み込みマクロ">クロスコンパイルのための組み込みマクロ</a> を参照くださいね。</p></div><p><strong>main.cpp. </strong>
+</p><pre xmlns="" class="prettyprint">  1 #if __cplusplus &lt; 201703L
+  2 # pragma message "std=c++17を指定してください"
+  3 #endif
+  4
+  5 #include &lt;iostream&gt;
+  6
+  7 struct Foo
+  8 {
+  9   int x,y,z;
+ 10 };
+ 11
+ 12 int main()
+ 13 {
+ 14   Foo f[2]{{1,2,3},{4,5,6}};
+ 15
+ 16   for(const auto &amp;[x,y,z] : f ){
+ 17     std::cout &lt;&lt; x &lt;&lt; y &lt;&lt; z &lt;&lt; '\n';
+ 18   }
+ 19
+ 20   return 0;
+ 21 }</pre><p>
+</p><p><strong>ビルドと出力. </strong>
+</p><pre xmlns="" class="prettyprint">$ g++ main.cpp -std=c++17
+$ ./a.out
+123
+456</pre><p>
+</p><p>このソースコードでは Foo というクラスの配列を使っています。</p><pre xmlns="" class="prettyprint">  7 struct Foo
+  8 {
+  9   int x,y,z;
+ 10 };
+ 14   Foo f[2]{{1,2,3},{4,5,6}};</pre><p>インスタンス f は配列なので範囲 for ループに適用できます。</p><pre xmlns="" class="prettyprint"> 16   for(const auto &amp;[x,y,z] : f ){
+ 17     std::cout &lt;&lt; x &lt;&lt; y &lt;&lt; z &lt;&lt; '\n';
+ 18   }</pre><p>この構文は若干わかりにくいですが [] の中で展開したい変数が宣言・定義されてます。</p></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch320.html">戻る</a> </td><td width="20%" align="center"><a accesskey="u" href="pt49.html">上に戻る</a></td><td width="40%" align="right"> <a accesskey="n" href="pt50.html">次へ</a></td></tr><tr><td width="40%" align="left" valign="top"> </td><td width="20%" align="center"><a accesskey="h" href="index.html">ホーム</a></td><td width="40%" align="right" valign="top"> </td></tr></table></div><wrapper xmlns=""><p>Copyright 2017-2018, by Masaki Komatsu</p>
+
+</wrapper></body></html>

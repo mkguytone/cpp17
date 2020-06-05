@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>第320章 クラスにおける制約</title><link rel="stylesheet" type="text/css" href="index.css" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="home" href="index.html" title="C++ プログラミング" /><link rel="up" href="pt49.html" title="パート XLIX. 構造化束縛 ( C++17 )" /><link rel="prev" href="ch319.html" title="第319章 複素数ライブラリ" /><link rel="next" href="ch321.html" title="第321章 範囲 for ループ" /><meta xmlns="" name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0" /><script xmlns="" type="text/javascript" src="prettify/prettify.js"></script><link xmlns="" rel="stylesheet" type="text/css" href="prettify/skins/sons-of-obsidian.css" /><script xmlns="">
+    window.addEventListener("load", function() {
+      PR.prettyPrint();
+	  });	
+	</script><script xmlns="" type="text/javascript" src="script/head.js"></script></head><body><div class="navheader"><table width="100%" summary="Navigation header"><tr><td width="20%" align="left"><a accesskey="p" href="ch319.html">戻る</a> </td><th width="60%" align="center"> </th><td width="20%" align="right"> <a accesskey="n" href="ch321.html">次へ</a></td></tr></table><hr /></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a id="_クラスにおける制約"></a>第320章 クラスにおける制約</h2></div></div></div><p>構造化束縛は便利そうに見えますが、制約はもちろんあります。</p><p>複雑なクラス型に対して使えないか調べてみましたが、サポートしているのは本当にシンプルなクラス型だけのようです。</p><p>例えば以下の3つのケースでは構造化束縛は機能しません。</p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem">
+無名内部クラス（ラムダができる前のコードで良く見ました…）
+</li><li class="listitem">
+プライベート変数
+</li><li class="listitem">
+継承
+</li></ul></div><p>以下のソースコードは動作しないことをチェックしています。（コンパイルは通りません）</p><div class="note" style="margin-left: 0; margin-right: 10%;"><h3 class="title">注記</h3><p>マクロについては <a class="link" href="ch36.html" title="第36章 クロスコンパイルのための組み込みマクロ">クロスコンパイルのための組み込みマクロ</a> を参照くださいね。</p></div><p><strong>main.cpp. </strong>
+</p><pre xmlns="" class="prettyprint">    1 #if __cplusplus &lt; 201703L
+    2 # pragma message "-std=c++17を指定してください"
+    3 #endif
+    4
+    5 struct Foo {
+    6   int a;
+    7   struct {
+    8     int b;
+    9   };
+   10 };
+   11
+   12 struct PS {
+   13   PS(int a,int b) : M_a_{a}, M_b_{b} {}
+   14   int M_a_;
+   15 private:
+   16   int M_b_;
+   17 };
+   18
+   19 struct base { int x; };
+   20
+   21 struct derived : public base
+   22 { int y; };
+   23
+   24 int main()
+   25 {
+   26   Foo f{1,2};
+   27   PS p{1,2};
+   28   derived d{1,2};
+   29
+&gt;&gt; 30   auto [a] = f;
+&gt;&gt; 31   auto [c,d] = p;
+&gt;&gt; 32   auto [e] = d;
+   33
+   34   return 0;
+   35 }</pre><p>
+</p><p>これを gcc でコンパイルしようとすると怒られます。</p><pre xmlns="" class="prettyprint">$ g++ main.cpp -std=c++17
+main.cpp: In function ‘int main()’:
+main.cpp:30:7: error: cannot decompose class type ‘Foo’ because it has an anonymous struct member
+  auto [a] = f;
+       ^~~
+main.cpp:7:2: note: declared here
+  struct {
+  ^~~~~~
+main.cpp:31:11: error: conflicting declaration ‘auto d’
+  auto [c,d] = p;
+           ^
+main.cpp:28:10: note: previous declaration as ‘derived d’
+  derived d{1,2};
+          ^
+main.cpp:32:7: error: cannot decompose class type ‘derived’: both it and its base class ‘base’ have non-static data members
+  auto [e] = d;
+       ^~~</pre><p>まずは無名クラスですね。</p><pre xmlns="" class="prettyprint">    1 struct Foo {
+    2   int a;
+    3   struct {
+    4     int b;
+    5   };
+    6 };
+   22   Foo f{1,2};
+&gt;&gt; 26   auto [a] = f;</pre><p>このように展開する再、 Foo クラス内に無名クラスが入っているとコンパイラに怒られます。</p><p>次のプライベートメンバーの展開は特に気をつけたいです。</p><pre xmlns="" class="prettyprint">   12 struct PS {
+   13   PS(int a,int b) : M_a_{a}, M_b_{b} {}
+   14   int M_a_;
+   15 private:
+   16   int M_b_;
+   17 };
+   27   PS p{1,2};
+&gt;&gt; 31   auto [c,d] = p;</pre><p>メンバー変数が隠蔽されてるだけでコンパイルエラーになるので、これは結構厳しい制約ですよね。</p><p>最後は継承をしているオブジェクトの展開です。</p><pre xmlns="" class="prettyprint">   19 struct base { int x; };
+   20
+   21 struct derived : public base
+   22 { int y; };
+   28   derived d{1,2};
+&gt;&gt; 32   auto [e] = d;</pre><p>継承を良く使う人にとっては悪いニュースかもしれないです…</p><p>(´・ω・｀)</p></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch319.html">戻る</a> </td><td width="20%" align="center"><a accesskey="u" href="pt49.html">上に戻る</a></td><td width="40%" align="right"> <a accesskey="n" href="ch321.html">次へ</a></td></tr><tr><td width="40%" align="left" valign="top"> </td><td width="20%" align="center"><a accesskey="h" href="index.html">ホーム</a></td><td width="40%" align="right" valign="top"> </td></tr></table></div><wrapper xmlns=""><p>Copyright 2017-2018, by Masaki Komatsu</p>
+
+</wrapper></body></html>

@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>パート LIII. メタ関数 ( C++17 )</title><link rel="stylesheet" type="text/css" href="index.css" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="home" href="index.html" title="C++ プログラミング" /><link rel="up" href="index.html" title="C++ プログラミング" /><link rel="prev" href="ch334.html" title="第334章 std::optional との合わせ技" /><link rel="next" href="ch335.html" title="第335章 std::bool_constant やテンプレートのテクを使ってチェックする" /><meta xmlns="" name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0" /><script xmlns="" type="text/javascript" src="prettify/prettify.js"></script><link xmlns="" rel="stylesheet" type="text/css" href="prettify/skins/sons-of-obsidian.css" /><script xmlns="">
+    window.addEventListener("load", function() {
+      PR.prettyPrint();
+	  });	
+	</script><script xmlns="" type="text/javascript" src="script/head.js"></script></head><body><div class="navheader"><table width="100%" summary="Navigation header"><tr><td width="20%" align="left"><a accesskey="p" href="ch334.html">戻る</a> </td><th width="60%" align="center"> </th><td width="20%" align="right"> <a accesskey="n" href="ch335.html">次へ</a></td></tr></table><hr /></div><div class="part"><div class="titlepage"><div><div><h1 class="title"><a id="_メタ関数_c_17"></a>パート LIII. メタ関数 ( C++17 )</h1></div></div></div><div class="toc"><p><strong>目次</strong></p><dl class="toc"><dt><span class="chapter"><a href="ch335.html">335. std::bool_constant やテンプレートのテクを使ってチェックする</a></span></dt><dt><span class="chapter"><a href="ch336.html">336. std::enable_if_t を使って便利にする</a></span></dt></dl></div><p>メタ関数はクラステンプレートや、テンプレート関数を使えば作ることは可能ですが、複雑なものを作ろうとすると難易度が高くなりがちでした。</p><p>C++17 で導入されたメタ関数は 3 つありますが、どれも実装難易度をかなり下げてくれる可能性があります。</p><div class="variablelist"><dl class="variablelist"><dt><span class="term">
+std::conjunction
+</span></dt><dd>
+論理ANDをするメタ関数
+</dd><dt><span class="term">
+std::disjunction
+</span></dt><dd>
+論理ORをするメタ関数
+</dd><dt><span class="term">
+std::negation
+</span></dt><dd>
+論理NOTをするメタ関数
+</dd></dl></div><p>うち２つは可変長テンプレート引数を前提とします。</p><pre xmlns="" class="prettyprint">// &lt;type_traits&gt;
+template&lt;class... B&gt;
+struct conjunction;
+
+template&lt;class... B&gt;
+struct disjunction;
+
+template&lt;class B&gt;
+struct negation;</pre><p>例えば「B1,B2,…,Bi,…,Bn-1,Bn」といったテンプレート引数があったとします。</p><p>このテンプレートで指定した型には 「B1::value,B2::value,…,Bi::value,…,Bn-1::value,Bn::value」というようにブーリアン型に変換が可能な value というメンバー変数があるものとします。</p><p>std::conjunction&lt;B0,B1,…,Bi,…,Bn&gt;::value は以下のような場合に true となります。</p><pre xmlns="" class="prettyprint">bool(B0::value)==true
+bool(B1::value)==true
+...
+bool(Bi::value)==true
+...
+bool(Bn::value)==true</pre><p>ちなみに std::conjunction&lt;B0,B1,…,Bi,…,Bn&gt;::value は std::conjunction_v&lt;B0,B1,…,Bi,…,Bn&gt; と簡略化することが可能です。</p><pre xmlns="" class="prettyprint">template&lt;class... B&gt;
+inline constexpr bool conjunction_v = conjunction&lt;B...&gt;::value;</pre><p>std::conjunction は論理積を表すメタ関数でありリファレンス実装は以下のようなものとなります。</p><pre xmlns="" class="prettyprint">template&lt;class...&gt; struct conjunction : std::true_type { };
+template&lt;class B1&gt; struct conjunction&lt;B1&gt; : B1 { };
+template&lt;class B1, class... Bn&gt;
+struct conjunction&lt;B1, Bn...&gt;
+    : std::conditional_t&lt;bool(B1::value), conjunction&lt;Bn...&gt;, B1&gt; {};</pre><p>std::disjunction は論理和を表すメタ関数です。</p><p>std::disjunction&lt;B0,B1,…,Bi,…,Bn&gt;::value は Bi::value に１つでも true があれば true となります。</p><pre xmlns="" class="prettyprint">bool(B0::value)==true
+bool(B1::value)==false
+...
+bool(Bi::value)==true
+...
+bool(Bn::value)==false</pre><p>この例では true が 1 つでもあるので std::disjunction の value の保持する値は true となります。</p><p>これは論理 OR と同じ挙動となりますね。</p><p>std::disjunction&lt;B0,B1,…,Bi,…,Bn&gt;::value は std::disjunction_v&lt;B0,B1,…,Bi,…,Bn&gt; と簡略化することが可能です。</p><pre xmlns="" class="prettyprint">template&lt;class... B&gt;
+inline constexpr bool disjunction_v = disjunction&lt;B...&gt;::value;</pre><p>std::negation&lt;B&gt; は B::value が true なら false になります。 B::value が false なら true になるので、真偽値が逆になる効果を持ちます。</p><pre xmlns="" class="prettyprint">template&lt;class B&gt;
+inline constexpr bool negation_v = negation&lt;B&gt;::value;</pre><p>じゃあ軽く実装してみましょうかね。</p><div class="note" style="margin-left: 0; margin-right: 10%;"><h3 class="title">注記</h3><p>マクロについては <a class="link" href="ch36.html" title="第36章 クロスコンパイルのための組み込みマクロ">クロスコンパイルのための組み込みマクロ</a> を参照くださいね。</p></div><p><strong>main.cpp. </strong>
+</p><pre xmlns="" class="prettyprint">  1 #if __cplusplus != 201703L
+  2 #  pragma message "-std=c++17を指定してください"
+  3 #endif
+  4
+  5 #if defined(__GNUC__) &amp;&amp; (__GNUC__ &lt; 7)
+  6 #  ifndef __clang__
+  7 #    pragma message "gccのバージョンが古いです"
+  8 #  endif
+  9 #elif defined(__clang__) &amp;&amp; (__clang_major__ &lt; 6)
+ 10 #  pragma message "clangのバージョンが古いです"
+ 11 #endif
+ 12
+ 13 #include &lt;type_traits&gt;
+ 14
+ 15 template&lt;typename T&gt;
+ 16 struct TrueType {
+ 17   static constexpr bool value = true;
+ 18 };
+ 19
+ 20 template&lt;typename T&gt;
+ 21 struct FalseType {
+ 22   static constexpr bool value = false;
+ 23 };
+ 24
+ 25 static_assert(
+ 26   std::conjunction&lt;TrueType&lt;int&gt;,TrueType&lt;double&gt;,TrueType&lt;long&gt;&gt;::value
+ 27 );
+ 28
+ 29 static_assert(
+ 30   std::disjunction&lt;TrueType&lt;float&gt;,FalseType&lt;double&gt;&gt;::value
+ 31 );
+ 32
+ 33 static_assert(
+ 34   std::negation&lt;FalseType&lt;float&gt;&gt;::value
+ 35 );
+ 36
+ 37 static_assert(
+ 38   std::negation&lt;std::disjunction&lt;FalseType&lt;void&gt;,FalseType&lt;bool&gt;,FalseType&lt;int&gt;&gt;&gt;::value
+ 39 );
+ 40
+ 41 int main(){}</pre><p>
+</p><p>この実装例は「 bool(B0::value) 」が常に true か false かを返す 2 つの型を使用しています。</p><pre xmlns="" class="prettyprint"> 15 template&lt;typename T&gt;
+ 16 struct TrueType {
+ 17   static constexpr bool value = true;
+ 18 };
+ 19
+ 20 template&lt;typename T&gt;
+ 21 struct FalseType {
+ 22   static constexpr bool value = false;
+ 23 };</pre><p>つまり TrueType の 「 bool(B0::value) 」、「 bool(B1::value) 」、「 bool(B2::value) 」、「 bool(Bn::value) 」の全てが true を返すということですね。</p><p>FalseType は逆で全ての value が false として評価されます。</p><p>std::conjunction は論理積（AND）ということで value が true になるためには全てのテンプレート引数の value が true である必要があります。</p><pre xmlns="" class="prettyprint"> 25 static_assert(
+ 26   std::conjunction&lt;TrueType&lt;int&gt;,TrueType&lt;double&gt;,TrueType&lt;long&gt;&gt;::value
+ 27 );</pre><p>これは全てのテンプレート引数で指定された型の value が true なので std::conjunction の value は true になります。</p><p>std::disjunction は論理和（OR）なので、FalseType を入れても value は true に評価されます。</p><pre xmlns="" class="prettyprint"> 29 static_assert(
+ 30   std::disjunction&lt;TrueType&lt;float&gt;,FalseType&lt;double&gt;&gt;::value
+ 31 );</pre><p>悪い例も考えて見ましょう…</p><p>例えば論理和にも論理積のベースとなる型に value 定数が定義されていない空の場合を考えて見ましょう。</p><div class="note" style="margin-left: 0; margin-right: 10%;"><h3 class="title">注記</h3><p>マクロについては <a class="link" href="ch36.html" title="第36章 クロスコンパイルのための組み込みマクロ">クロスコンパイルのための組み込みマクロ</a> を参照くださいね。</p></div><p><strong>main.cpp. </strong>
+</p><pre xmlns="" class="prettyprint">  1 #if __cplusplus != 201703L
+  2 #  pragma message "-std=c++17を指定してください"
+  3 #endif
+  4
+  5 #if defined(__GNUC__) &amp;&amp; (__GNUC__ &lt; 7)
+  6 #  ifndef __clang__
+  7 #    pragma message "gccのバージョンが古いです"
+  8 #  endif
+  9 #elif defined(__clang__) &amp;&amp; (__clang_major__ &lt; 6)
+ 10 #  pragma message "clangのバージョンが古いです"
+ 11 #endif
+ 12
+ 13 #include &lt;type_traits&gt;
+ 14
+ 15 template&lt;typename T&gt;
+ 16 struct AnyType{};
+ 17
+ 18 static_assert(
+ 19   std::disjunction&lt;AnyType&lt;float&gt;,AnyType&lt;double&gt;&gt;::value
+ 20 );
+ 21
+ 22 static_assert(
+ 23   std::conjunction&lt;AnyType&lt;float&gt;,AnyType&lt;double&gt;&gt;::value
+ 24 );
+ 25
+ 26 int main(){}</pre><p>
+</p><p>std::disjunction と std::conjunction がチェックする AnyType 型には bool 型の value 変数が定義されてませんね。</p><p>なので論理積も論理和も意味はないんですが、両方とも true になっちゃってますね。</p><p>ですが true になったからって、評価する式が抜け落ちてるんですから何もしてないわけです。</p><p>こういう型の実装を忘れるのは、頻繁でなくともたまにやっちゃいそうなミスです。</p><p>ではもう少し複雑な実装例も見てみましょう。</p><p>常に true とか false を返す型でなく、例えば整数型なら true でそれ以外は false を返すような型なんかどうでしょうかね？</p><div class="note" style="margin-left: 0; margin-right: 10%;"><h3 class="title">注記</h3><p>マクロについては <a class="link" href="ch36.html" title="第36章 クロスコンパイルのための組み込みマクロ">クロスコンパイルのための組み込みマクロ</a> を参照くださいね。</p></div><p><strong>main.cpp. </strong>
+</p><pre xmlns="" class="prettyprint">    1 #if __cplusplus != 201703L
+    2 #  pragma message "-std=c++17を指定してください"
+    3 #endif
+    4
+    5 #if defined(__GNUC__) &amp;&amp; (__GNUC__ &lt; 7)
+    6 #  ifndef __clang__
+    7 #    pragma message "gccのバージョンが古いです"
+    8 #  endif
+    9 #elif defined(__clang__) &amp;&amp; (__clang_major__ &lt; 6)
+   10 #  pragma message "clangのバージョンが古いです"
+   11 #endif
+   12
+   13 #include &lt;type_traits&gt;
+   14
+   15 template&lt;typename T&gt;
+   16 struct IntegerType{
+   17   static constexpr bool value = std::is_integral&lt;T&gt;::value;
+   18 };
+   19
+   20 template&lt;typename T&gt;
+   21 struct FloatingType{
+   22   static constexpr bool value = std::is_floating_point&lt;T&gt;::value;
+   23 };
+   24
+&gt;&gt; 25 static_assert(
+   26   std::disjunction&lt;IntegerType&lt;float&gt;,IntegerType&lt;double&gt;&gt;::value
+   27 );
+   28
+   29 static_assert(
+   30   std::disjunction&lt;FloatingType&lt;float&gt;,FloatingType&lt;double&gt;&gt;::value
+   31 );
+   32
+   33 int main(){}</pre><p>
+</p><p>このソースコードは 25 行目に問題があるためコンパイルしません。</p><p>まずはベース型の定義です。</p><pre xmlns="" class="prettyprint">   15 template&lt;typename T&gt;
+   16 struct IntegerType{
+   17   static constexpr bool value = std::is_integral&lt;T&gt;::value;
+   18 };
+   19
+   20 template&lt;typename T&gt;
+   21 struct FloatingType{
+   22   static constexpr bool value = std::is_floating_point&lt;T&gt;::value;
+   23 };</pre><p>IntegerType は整数型、FloatingType の value は浮動小数点型のときのみに true が設定されます。</p><p>以下の場合では Floatingtype のテンプレート引数に指定した型が float と double とも浮動小数点型でない場合にコンパイルエラーとなります。</p><p>この場合 float と double の両方とも浮動小数点型なのでコンパイルエラーにはなりません。</p><pre xmlns="" class="prettyprint">   29 static_assert(
+   30   std::disjunction&lt;FloatingType&lt;float&gt;,FloatingType&lt;double&gt;&gt;::value
+   31 );</pre><p>それでコンパイルエラーとなっている箇所は以下の行です。</p><pre xmlns="" class="prettyprint">&gt;&gt; 25 static_assert(
+   26   std::disjunction&lt;IntegerType&lt;float&gt;,IntegerType&lt;double&gt;&gt;::value
+   27 );</pre><p>IntegerType のテンプレート引数に float や double を指定しています。</p><p>論理和（OR）なので、いずれかでも真であればエラーにはなりませんが、この箇所では両方とも整数型ではないので、コンパイルエラーとなります。</p><p>std::disjunction には一つでも true があれば良いのですが IntegerType&lt;float&gt; と IntegerType&lt;double&gt; の両方とも false なので static_assert は失敗します。</p><p>もう少し難しめの使用例も考えてみました。</p><div class="note" style="margin-left: 0; margin-right: 10%;"><h3 class="title">注記</h3><p>マクロについては <a class="link" href="ch36.html" title="第36章 クロスコンパイルのための組み込みマクロ">クロスコンパイルのための組み込みマクロ</a> を参照くださいね。</p></div><p><strong>main.cpp. </strong>
+</p><pre xmlns="" class="prettyprint">  1 #if __cplusplus != 201703L
+  2 #pragma message "-std=c++17を指定してください"
+  3 #endif
+  4
+  5 #if defined(__GNUC__) &amp;&amp;  ( __GNUC__ &lt; 7)
+  6 #  ifndef __clang__
+  7 #    pragma message "GCCのバージョンが古いです"
+  8 #  endif
+  9 #elif defined(__clang__) &amp;&amp; ( __clang_major__ &lt; 6)
+ 10 #pragma message "Clangのバージョンが古いです"
+ 11 #endif
+ 12
+ 13 #include &lt;type_traits&gt;
+ 14
+ 15 template&lt;class... T&gt;
+ 16 struct void_conjunction_t {
+ 17   static constexpr bool value = std::conjunction_v&lt;std::is_void&lt;T&gt;...&gt;;
+ 18 };
+ 19
+ 20 template&lt;class... T&gt;
+ 21 struct void_disjunction_t {
+ 22   static constexpr bool value = std::disjunction_v&lt;std::is_void&lt;T&gt;...&gt;;
+ 23 };
+ 24
+ 25 static_assert(void_conjunction_t&lt;void,void,void&gt;::value);
+ 26 static_assert(void_disjunction_t&lt;long,double,void&gt;::value);
+ 27 static_assert(std::negation&lt;void_conjunction_t&lt;void,long,int&gt;&gt;::value);
+ 28
+ 29 int main(){}</pre><p>
+</p><p>このファイルはビルドしてもコンパイルエラーは出ません。</p><p>テンプレート引数が全て void 型かのチェックを一括で行ってくれるのが void_conjunction_t クラステンプレートです。</p><pre xmlns="" class="prettyprint"> 15 template&lt;class... T&gt;
+ 16 struct void_conjunction_t {
+ 17   static constexpr bool value = std::conjunction_v&lt;std::is_void&lt;T&gt;...&gt;;
+ 18 };</pre><p>一番重要なのが value 変数が bool 型ということですかね。</p><p>チェックした結果は value 変数の中に入ってるので、そこをアサートします。</p><pre xmlns="" class="prettyprint"> 25 static_assert(void_conjunction_t&lt;void,void,void&gt;::value);</pre><p>これだけです。</p><p>テンプレート引数のいずれかでも void 型かの一括チェックを行ってくれるのは void_disjunction_t クラステンプレートになります。</p><pre xmlns="" class="prettyprint"> 20 template&lt;class... T&gt;
+ 21 struct void_disjunction_t {
+ 22   static constexpr bool value = std::disjunction_v&lt;std::is_void&lt;T&gt;...&gt;;
+ 23 };</pre><p>結果を取り出すには以下のようにします。</p><pre xmlns="" class="prettyprint"> 26 static_assert(void_disjunction_t&lt;long,double,void&gt;::value);</pre><p>第三テンプレート引数が void 型なので、これは通ります。</p><p>最後に std::negation となります。</p><pre xmlns="" class="prettyprint"> 27 static_assert(std::negation&lt;void_conjunction_t&lt;void,long,int&gt;&gt;::value);</pre><p>これは void_conjuntion_t の結果の真偽を引っくり返します。</p><p>void_conjuntion_t は偽なので value には真が入っています。</p></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch334.html">戻る</a> </td><td width="20%" align="center"> </td><td width="40%" align="right"> <a accesskey="n" href="ch335.html">次へ</a></td></tr><tr><td width="40%" align="left" valign="top"> </td><td width="20%" align="center"><a accesskey="h" href="index.html">ホーム</a></td><td width="40%" align="right" valign="top"> </td></tr></table></div><wrapper xmlns=""><p>Copyright 2017-2018, by Masaki Komatsu</p>
+
+</wrapper></body></html>

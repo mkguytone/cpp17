@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>第330章 ポインターはどうなるか？</title><link rel="stylesheet" type="text/css" href="index.css" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="home" href="index.html" title="C++ プログラミング" /><link rel="up" href="pt50.html" title="パート L. テンプレートの型推論 ( C++17 )" /><link rel="prev" href="ch329.html" title="第329章 std::tuple" /><link rel="next" href="ch331.html" title="第331章 可変長引数はどうなるか？" /><meta xmlns="" name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0" /><script xmlns="" type="text/javascript" src="prettify/prettify.js"></script><link xmlns="" rel="stylesheet" type="text/css" href="prettify/skins/sons-of-obsidian.css" /><script xmlns="">
+    window.addEventListener("load", function() {
+      PR.prettyPrint();
+	  });	
+	</script><script xmlns="" type="text/javascript" src="script/head.js"></script></head><body><div class="navheader"><table width="100%" summary="Navigation header"><tr><td width="20%" align="left"><a accesskey="p" href="ch329.html">戻る</a> </td><th width="60%" align="center"> </th><td width="20%" align="right"> <a accesskey="n" href="ch331.html">次へ</a></td></tr></table><hr /></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a id="_ポインターはどうなるか"></a>第330章 ポインターはどうなるか？</h2></div></div></div><p>ポインターとかはどうなるの？　って疑問に思う人もいるでしょうから、一応実装例だけ示しておきます。</p><p>結論からいうと何も変わらないんですがね…</p><p>では実装例です。</p><pre xmlns="" class="prettyprint">  1 #include &lt;type_traits&gt;
+  2
+  3 template&lt;class T = void&gt;
+  4 struct Foo {
+  5   Foo(){}
+  6   Foo(const Foo&amp;){}
+  7 };
+  8
+  9 template&lt;class T&gt;
+ 10 struct Bar {
+ 11   Bar(T,T){}
+ 12 };
+ 13
+ 14 #if __cplusplus &gt;= 201703L
+ 15 template&lt;class T&gt;
+ 16 Foo(T) -&gt; Foo&lt;T&gt;;
+ 17
+ 18 template&lt;class T = void&gt;
+ 19 Foo(void) -&gt; Foo&lt;T&gt;;
+ 20
+ 21 template&lt;class T&gt;
+ 22 Bar(T,T) -&gt; Bar&lt;T&gt;;
+ 23 #endif
+ 24
+ 25 int main(){
+ 26 #if __cplusplus &gt;= 201703L
+ 27   auto *a = new Foo{};
+ 28   auto *b = new Bar{1,2};
+ 29 #else
+ 30   auto *a = new Foo&lt;void&gt;{};
+ 31   auto *b = new Bar&lt;int&gt;{1,2};
+ 32 #endif
+ 33   static_assert(std::is_same&lt;decltype(a),Foo&lt;void&gt;*&gt;::value,"");
+ 34   static_assert(std::is_same&lt;decltype(b),Bar&lt;int&gt;*&gt;::value,"");
+ 35   delete a;
+ 36   delete b;
+ 37 }</pre><p>このように new 演算子でコンストラクターを呼び出しても同じ効果を保持してくれます。</p></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch329.html">戻る</a> </td><td width="20%" align="center"><a accesskey="u" href="pt50.html">上に戻る</a></td><td width="40%" align="right"> <a accesskey="n" href="ch331.html">次へ</a></td></tr><tr><td width="40%" align="left" valign="top"> </td><td width="20%" align="center"><a accesskey="h" href="index.html">ホーム</a></td><td width="40%" align="right" valign="top"> </td></tr></table></div><wrapper xmlns=""><p>Copyright 2017-2018, by Masaki Komatsu</p>
+
+</wrapper></body></html>

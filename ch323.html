@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>第323章 クラステンプレートの型推論ガイド（ C++17 ）</title><link rel="stylesheet" type="text/css" href="index.css" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="home" href="index.html" title="C++ プログラミング" /><link rel="up" href="pt50.html" title="パート L. テンプレートの型推論 ( C++17 )" /><link rel="prev" href="ch322.html" title="第322章 関数テンプレートとクラステンプレートの型推論" /><link rel="next" href="ch324.html" title="第324章 ガイドなしの型推論" /><meta xmlns="" name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0" /><script xmlns="" type="text/javascript" src="prettify/prettify.js"></script><link xmlns="" rel="stylesheet" type="text/css" href="prettify/skins/sons-of-obsidian.css" /><script xmlns="">
+    window.addEventListener("load", function() {
+      PR.prettyPrint();
+	  });	
+	</script><script xmlns="" type="text/javascript" src="script/head.js"></script></head><body><div class="navheader"><table width="100%" summary="Navigation header"><tr><td width="20%" align="left"><a accesskey="p" href="ch322.html">戻る</a> </td><th width="60%" align="center"> </th><td width="20%" align="right"> <a accesskey="n" href="ch324.html">次へ</a></td></tr></table><hr /></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a id="_クラステンプレートの型推論ガイド_c_17"></a>第323章 クラステンプレートの型推論ガイド（ C++17 ）</h2></div></div></div><p>クラステンプレート型の推論は定義を緩くすると昔からありますた…</p><p>C++17 からはその推論機能が大幅に強化されました。</p><p>それでどういう機能かと言うと、テンプレートを指定しなくても、自動で推論してくれます。</p><p>別の言葉を使って説明すると、テンプレートの引数を指定もしていないのに、テンプレートの型を推論してくれるのがクラステンプレートの型推論です。</p><div class="note" style="margin-left: 0; margin-right: 10%;"><h3 class="title">注記</h3><p>といっても使い勝手が少しよくなったぐらいで C++17 の界隈でどれだけ需要があるかは疑わしいです。</p><p>なぜそう思うかと言うと最近使われているスクリプト言語に近い構文が使えるようになるという程度です。</p><p>コンパイラ依存もまだあるので、すぐに使えるというほどではないですし、導入されるのは数年後ぐらいの印象ですかね。</p></div><p>ではまず強化された型推論の例でも見てみましょうかね。</p><pre xmlns="" class="prettyprint">  1 #if __cplusplus &lt; 201703L
+  2 # pragma message "-std=c++17を指定してください"
+  3 #endif
+  4
+  5 #if defined(__GNUC__) &amp;&amp; (__GNUC__ &lt; 7)
+  6 # ifndef __clang__
+  7 #   pragma message "gccのバージョンが古いです"
+  8 # endif
+  9 #elif defined(__clang__) &amp;&amp; (__clang_major__ &lt; 6)
+ 10 #  pragma message "clangのバージョンが古いです"
+ 11 #endif
+ 12
+ 13 #include &lt;type_traits&gt;
+ 14
+ 15 template&lt;class T&gt;
+ 16 struct A {
+ 17   A(T){}
+ 18   A(const A&amp;){}
+ 19 };
+ 20
+ 21 #if __cplusplus &gt;= 201703L
+ 22 template&lt;class T&gt;
+ 23 A(T) -&gt; A&lt;T&gt;;
+ 24 #endif
+ 25
+ 26 int main()
+ 27 {
+ 28
+ 29 #if __cplusplus &gt;= 201703L
+ 30   A a(10);
+ 31   A b = a;
+ 32   A c(a);
+ 33
+ 34 #else
+ 35   A&lt;int&gt; a(10);
+ 36   A&lt;int&gt; b = a;
+ 37   A&lt;int&gt; c(a);
+ 38 #endif
+ 39
+ 40   static_assert(std::is_same&lt;decltype(a),A&lt;int&gt;&gt;::value,"");
+ 41   static_assert(std::is_same&lt;decltype(b),A&lt;int&gt;&gt;::value,"");
+ 42   static_assert(std::is_same&lt;decltype(c),A&lt;int&gt;&gt;::value,"");
+ 43
+ 44   return 0;
+ 45 }</pre><p>ちょっと C++17 と C++14 以前でも通すために無理をしていますが、重要なのはクラステンプレートのインスタンス化をするのにテンプレートパラメーターが不要な点です。</p><p>C++14 以前の構文では以下のようにテンプレート引数を指定していますね。</p><pre xmlns="" class="prettyprint"> 15 template&lt;class T&gt;
+ 16 struct A {
+ 17   A(T){}
+ 18   A(const A&amp;){}
+ 19 };
+
+ //割愛
+
+ 35   A&lt;int&gt; a(10);
+ 36   A&lt;int&gt; b = a;
+ 37   A&lt;int&gt; c(a);</pre><p>これは C++17 では以下のような構文に書き直すことができます。</p><pre xmlns="" class="prettyprint"> 15 template&lt;class T&gt;
+ 16 struct A {
+ 17   A(T){}
+ 18   A(const A&amp;){}
+ 19 };
+
+ //割愛
+
+ 22 template&lt;class T&gt;
+ 23 A(T) -&gt; A&lt;T&gt;;
+
+ //割愛
+
+ 30   A a(10);
+ 31   A b = a;
+ 32   A c(a);</pre><p>このようにテンプレート引数なしでインスタンス化できるため、文字を簡略できますね。</p><p>ただしこの構文を可能とするには推論ガイドという定義をしてやる必要があります。</p><p>それが以下の2行です。</p><pre xmlns="" class="prettyprint"> 22 template&lt;class T&gt;
+ 23 A(T) -&gt; A&lt;T&gt;;</pre><p>これは T を引数とする A のコンストラクタ A(T) は A&lt;T&gt; として解釈ができるよ〜というコンパイラにヒントを与えています。</p><p>クラステンプレート型推論とはこんな風にガイドを与える必要がありますが、STLコンテナの中にはすでにガイドが提供されているものがあります。</p><p>例えば std::pair が良い例かと思います。</p><pre xmlns="" class="prettyprint">  1 #if __cplusplus &lt; 201703L
+  2 # pragma message "-std=c++17を指定してください"
+  3 #endif
+  4
+  5 #include &lt;utility&gt;
+  6 #include &lt;iostream&gt;
+  7
+  8 int main()
+  9 {
+ 10 #if __cplusplus &gt;= 201703L
+ 11   std::pair x{1,2};
+ 12 #else
+ 13   std::pair&lt;int,int&gt; x{1,2};
+ 14 #endif
+ 15   std::cout &lt;&lt; std::get<a xmlns="http://www.w3.org/1999/xhtml" id="CO1-75"></a>(1)(x) &lt;&lt; '\n';
+ 16   return 0;
+ 17 }</pre><p>この例ではテンプレート推論のガイドを定義してなくても推論が出来てますね。</p><pre xmlns="" class="prettyprint"> 11   std::pair x{1,2};</pre><p>C++14 以前の構文を考えるとかなり便利になったと言えるかもしれません。</p><pre xmlns="" class="prettyprint"> 13   std::pair&lt;int,int&gt; x{1,2};</pre><p>std::pair は他のSTLコンテナと使う事があるので、このように手軽に使える構文は悪くはないです。</p><p>他にも std::tuple も同じ使い方が可能となっています。</p><p>std::pair の他にもテンプレート引数での型が指定したものはいくつかありますが std::initializer_list がその最たるものだと思います。</p><pre xmlns="" class="prettyprint">  1 #if __cplusplus &lt; 201703L
+  2 # pragma message "-std=c++17を指定してください"
+  3 #endif
+  4
+  5 #include &lt;initializer_list&gt;
+  6 #include &lt;iostream&gt;
+  7
+  8 struct B { };
+  9
+ 10 template&lt;class T&gt;
+ 11 struct A
+ 12 {
+ 13   A(T,B){}
+ 14   A(T,T){}
+ 15   A(const A&amp;){}
+ 16   A(std::initializer_list&lt;T&gt;){}
+ 17 };
+ 18
+ 19 #if __cplusplus &gt;= 201703L
+ 20 template&lt;class T&gt;
+ 21 A(T,B) -&gt; A&lt;T&gt;;
+ 22
+ 23 template&lt;class T&gt;
+ 24 A(T,T) -&gt; A&lt;T&gt;;
+ 25
+ 26 template&lt;class T&gt;
+ 27 A(std::initializer_list&lt;T&gt;) -&gt; A&lt;T&gt;;
+ 28 #endif
+ 29
+ 30 int main() {
+ 31   A a(1,2);
+ 32   A b(1,B{});
+ 33   A c{1};
+ 34   A d(a);
+ 35 #if defined(___GNUC__) &amp;&amp; (__GNUC__ &gt;= 7)
+ 36 # ifndef __clang__
+ 37   std::initializer_list il{1,2,3};
+ 38   A e(il);
+ 39 # endif
+ 40 #elif defined(__clang__) &amp;&amp; (__clang_major__ &lt;= 6)
+ 41   std::initializer_list&lt;int&gt; il{1,2,3};
+ 42   A e(il);
+ 43 #endif
+ 44   return 0;
+ 45 }</pre><p>gcc7.3 では以下の箇所は通ります。</p><pre xmlns="" class="prettyprint"> 37   std::initializer_list il{1,2,3};
+ 38   A e(il);</pre><p>ただこの構文を clang6.0 で試したところコンパイルに失敗してしまいました。</p><p>この例のように型推論はかなり発展途上らしくコンパイラ依存の部分が結構あるようです。</p><p>コンパイラ依存についてはもう一つ例をお見せしたいので次の項目をご覧ください。</p></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch322.html">戻る</a> </td><td width="20%" align="center"><a accesskey="u" href="pt50.html">上に戻る</a></td><td width="40%" align="right"> <a accesskey="n" href="ch324.html">次へ</a></td></tr><tr><td width="40%" align="left" valign="top"> </td><td width="20%" align="center"><a accesskey="h" href="index.html">ホーム</a></td><td width="40%" align="right" valign="top"> </td></tr></table></div><wrapper xmlns=""><p>Copyright 2017-2018, by Masaki Komatsu</p>
+
+</wrapper></body></html>

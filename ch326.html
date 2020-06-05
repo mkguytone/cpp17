@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>第326章 引数が複数のコンストラクター</title><link rel="stylesheet" type="text/css" href="index.css" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="home" href="index.html" title="C++ プログラミング" /><link rel="up" href="pt50.html" title="パート L. テンプレートの型推論 ( C++17 )" /><link rel="prev" href="ch325.html" title="第325章 ネストの推論" /><link rel="next" href="ch327.html" title="第327章 イテレーターの型推論" /><meta xmlns="" name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0" /><script xmlns="" type="text/javascript" src="prettify/prettify.js"></script><link xmlns="" rel="stylesheet" type="text/css" href="prettify/skins/sons-of-obsidian.css" /><script xmlns="">
+    window.addEventListener("load", function() {
+      PR.prettyPrint();
+	  });	
+	</script><script xmlns="" type="text/javascript" src="script/head.js"></script></head><body><div class="navheader"><table width="100%" summary="Navigation header"><tr><td width="20%" align="left"><a accesskey="p" href="ch325.html">戻る</a> </td><th width="60%" align="center"> </th><td width="20%" align="right"> <a accesskey="n" href="ch327.html">次へ</a></td></tr></table><hr /></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a id="_引数が複数のコンストラクター"></a>第326章 引数が複数のコンストラクター</h2></div></div></div><p>コンストラクターは引数が一つの方が珍しいでしょうから、一応例だけ出しておきたいと思います。</p><pre xmlns="" class="prettyprint">  1 #if defined(__GNUC__) &amp;&amp; (__GNUC__ &lt; 7)
+  2 #  ifndef __clang__
+  3 #    error "gcc is not up to date"
+  4 #  endif
+  5 #elif defined(__clang__) &amp;&amp; (__clang_major__ &lt; 5)
+  6 #  error "clang is not up to date"
+  7 #endif
+  8
+  9 #include &lt;type_traits&gt;
+ 10
+ 11 template&lt;class T&gt;
+ 12 struct A {
+ 13   using value_type = T;
+ 14   constexpr A(value_type){}
+ 15   constexpr A(const A&amp;){}
+ 16   constexpr A&amp; operator=(const A&amp;){}
+ 17   constexpr A(T,T,int){}
+ 18   template&lt;class U&gt;
+ 19   constexpr A(int,T,U){}
+ 20 };
+ 21
+ 22 #if __cplusplus &gt;= 201703L
+ 23 template&lt;class T&gt;
+ 24 A(T) -&gt; A&lt;T&gt;;
+ 25
+ 26 template&lt;class T&gt;
+ 27 A(A&lt;T&gt;) -&gt; A&lt;A&lt;T&gt;&gt;;
+ 28
+ 29 template&lt;class T&gt;
+ 30 A(T,T,int) -&gt; A&lt;T&gt;;
+ 31
+ 32 template&lt;class U&gt;
+ 33 A(int,int,U) -&gt; A&lt;int&gt;;
+ 34
+ 35 #endif
+ 36
+ 37 int main()
+ 38 {
+ 39 #if __cplusplus &gt;= 201703L
+ 40   A a(10);
+ 41   A b = a;
+ 42   A c(10,10,'a');
+ 43   A d('a',10,10);
+ 44   static_assert(std::is_same&lt;decltype(a),A&lt;int&gt;&gt;::value);
+ 45   static_assert(std::is_same&lt;decltype(b),A&lt;A&lt;int&gt;&gt;&gt;::value);
+ 46   static_assert(std::is_same&lt;decltype(c),A&lt;int&gt;&gt;::value);
+ 47   static_assert(std::is_same&lt;decltype(d),A&lt;int&gt;&gt;::value);
+ 48 #else
+ 49   A&lt;int&gt; a(10);
+ 50   A&lt;int&gt; b = a;
+ 51   A&lt;int&gt; c(10,10,'a');
+ 52   A&lt;int&gt; d('a',10,10);
+ 53   static_assert(std::is_same&lt;decltype(a),A&lt;int&gt;&gt;::value,"");
+ 54   static_assert(std::is_same&lt;decltype(b),A&lt;int&gt;&gt;::value,"");
+ 55   static_assert(std::is_same&lt;decltype(c),A&lt;int&gt;&gt;::value,"");
+ 56   static_assert(std::is_same&lt;decltype(d),A&lt;int&gt;&gt;::value,"");
+ 57 #endif
+ 58 }</pre><p>このソースコードの特徴はクラステンプレート A のテンプレート引数を指定していないところです。</p><pre xmlns="" class="prettyprint"> 26 template&lt;class T&gt;
+ 27 A(A&lt;T&gt;) -&gt; A&lt;A&lt;T&gt;&gt;;
+ ...
+ 40   A a(10);
+ 41   A b = a;
+ ...
+ 45   static_assert(std::is_same&lt;decltype(b),A&lt;A&lt;int&gt;&gt;&gt;::value);</pre><p>この例だとコンパイラにとってはわかりにくいので、ガイドを指定してます。</p><p>もう一つ注目したいのは推論ガイドの特殊化したりして、コンパイラに明確な指示を送れることです。</p><pre xmlns="" class="prettyprint"> 29 template&lt;class T&gt;
+ 30 A(T,T,int) -&gt; A&lt;T&gt;;
+ 31
+ 32 template&lt;class U&gt;
+ 33 A(int,int,U) -&gt; A&lt;int&gt;;</pre><p>これがうまくいってるのはアサート文で確認できます。</p><pre xmlns="" class="prettyprint"> 42   A c(10,10,'a');
+ 43   A d('a',10,10);
+ ...
+ 46   static_assert(std::is_same&lt;decltype(c),A&lt;int&gt;&gt;::value);
+ 47   static_assert(std::is_same&lt;decltype(d),A&lt;int&gt;&gt;::value);</pre><p>まあこんな感じですが、引数が多い場合にはガイドを書いておくとマニュアル代わりになるかもしれないので、意外に便利かもしれないです。</p></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch325.html">戻る</a> </td><td width="20%" align="center"><a accesskey="u" href="pt50.html">上に戻る</a></td><td width="40%" align="right"> <a accesskey="n" href="ch327.html">次へ</a></td></tr><tr><td width="40%" align="left" valign="top"> </td><td width="20%" align="center"><a accesskey="h" href="index.html">ホーム</a></td><td width="40%" align="right" valign="top"> </td></tr></table></div><wrapper xmlns=""><p>Copyright 2017-2018, by Masaki Komatsu</p>
+
+</wrapper></body></html>

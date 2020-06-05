@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>第322章 関数テンプレートとクラステンプレートの型推論</title><link rel="stylesheet" type="text/css" href="index.css" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="home" href="index.html" title="C++ プログラミング" /><link rel="up" href="pt50.html" title="パート L. テンプレートの型推論 ( C++17 )" /><link rel="prev" href="pt50.html" title="パート L. テンプレートの型推論 ( C++17 )" /><link rel="next" href="ch323.html" title="第323章 クラステンプレートの型推論ガイド（ C++17 ）" /><meta xmlns="" name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0" /><script xmlns="" type="text/javascript" src="prettify/prettify.js"></script><link xmlns="" rel="stylesheet" type="text/css" href="prettify/skins/sons-of-obsidian.css" /><script xmlns="">
+    window.addEventListener("load", function() {
+      PR.prettyPrint();
+	  });	
+	</script><script xmlns="" type="text/javascript" src="script/head.js"></script></head><body><div class="navheader"><table width="100%" summary="Navigation header"><tr><td width="20%" align="left"><a accesskey="p" href="pt50.html">戻る</a> </td><th width="60%" align="center"> </th><td width="20%" align="right"> <a accesskey="n" href="ch323.html">次へ</a></td></tr></table><hr /></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a id="_関数テンプレートとクラステンプレートの型推論"></a>第322章 関数テンプレートとクラステンプレートの型推論</h2></div></div></div><p>C++17 で関数テンプレートの型推論はかなり良くなってきたと思います。</p><p>特にラムダに関わる部分はテンプレートと auto を組み合わせるべきか個人的に迷うことがありました。</p><p>でも最新のアップデートなら、混ぜてもコードが汚染されるような感覚がなくなった気がします（気のせいかも…）。</p><p>ではコードを見ながらチェックです。</p><div class="note" style="margin-left: 0; margin-right: 10%;"><h3 class="title">注記</h3><p>マクロについては <a class="link" href="ch36.html" title="第36章 クロスコンパイルのための組み込みマクロ">クロスコンパイルのための組み込みマクロ</a> を参照くださいね。</p></div><p><strong>main.cpp. </strong>
+</p><pre xmlns="" class="prettyprint">  1 #include &lt;iostream&gt;
+  2
+  3 template&lt;class T&gt;
+  4 struct Foo{
+  5   Foo(T t){ std::cout &lt;&lt; t &lt;&lt; '\n'; }
+  6 };
+  7
+  8 template&lt;class T&gt;
+  9 auto bar(T t)
+ 10 {
+ 11 #if __cplusplus &gt;= 201703L
+ 12   return Foo(t);
+ 13 #else
+ 14   return Foo&lt;T&gt;(t);
+ 15 #endif
+ 16 }
+ 17
+ 18 int main()
+ 19 {
+ 20 #if __cplusplus &gt;= 201703L
+ 21   bar(100);
+ 22   [](auto a){
+ 23     return Foo(a);
+ 24   }(200);
+ 25
+ 26 #else
+ 27   bar&lt;int&gt;(100);
+ 28   [](auto a){
+ 29     return Foo&lt;int&gt;(a);
+ 30   }(200);
+ 31
+ 32 #endif
+ 33 }</pre><p>
+</p><p>これをビルドして実行すると以下のような出力になります。</p><pre xmlns="" class="prettyprint">$ g++ main.cpp -std=c++17
+$ ./a.out
+100
+200</pre><p>まず気にしたいのは以下の箇所です。</p><pre xmlns="" class="prettyprint">  3 template&lt;class T&gt;
+  4 struct Foo{
+  5   Foo(T t){ std::cout &lt;&lt; t &lt;&lt; '\n'; }
+  6 };
+  8 template&lt;class T&gt;
+  9 auto bar(T t)
+ 10 {
+ 12   return Foo(t);</pre><p>まあ不自然では無いですが Foo はクラステンプレートなので本来ならテンプレート引数を明示的に指定しなきゃだめなはずです。</p><p>似たような表現は他にもあります。</p><pre xmlns="" class="prettyprint"> 22   [](auto a){
+ 23     return Foo(a);
+ 24   }(200);</pre><p>これはラムダ式内ですが auto から類推されてるので、かなりハードルが高そうですよね。</p><p>そうでス。</p><p>このようにテンプレート引数の省けるのが新しい推論ってことです。</p></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="pt50.html">戻る</a> </td><td width="20%" align="center"><a accesskey="u" href="pt50.html">上に戻る</a></td><td width="40%" align="right"> <a accesskey="n" href="ch323.html">次へ</a></td></tr><tr><td width="40%" align="left" valign="top"> </td><td width="20%" align="center"><a accesskey="h" href="index.html">ホーム</a></td><td width="40%" align="right" valign="top"> </td></tr></table></div><wrapper xmlns=""><p>Copyright 2017-2018, by Masaki Komatsu</p>
+
+</wrapper></body></html>

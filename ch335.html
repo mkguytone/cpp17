@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>第335章 std::bool_constant やテンプレートのテクを使ってチェックする</title><link rel="stylesheet" type="text/css" href="index.css" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="home" href="index.html" title="C++ プログラミング" /><link rel="up" href="pt53.html" title="パート LIII. メタ関数 ( C++17 )" /><link rel="prev" href="pt53.html" title="パート LIII. メタ関数 ( C++17 )" /><link rel="next" href="ch336.html" title="第336章 std::enable_if_t を使って便利にする" /><meta xmlns="" name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0" /><script xmlns="" type="text/javascript" src="prettify/prettify.js"></script><link xmlns="" rel="stylesheet" type="text/css" href="prettify/skins/sons-of-obsidian.css" /><script xmlns="">
+    window.addEventListener("load", function() {
+      PR.prettyPrint();
+	  });	
+	</script><script xmlns="" type="text/javascript" src="script/head.js"></script></head><body><div class="navheader"><table width="100%" summary="Navigation header"><tr><td width="20%" align="left"><a accesskey="p" href="pt53.html">戻る</a> </td><th width="60%" align="center"> </th><td width="20%" align="right"> <a accesskey="n" href="ch336.html">次へ</a></td></tr></table><hr /></div><div class="chapter"><div class="titlepage"><div><div><h2 class="title"><a id="_std_bool_constant_やテンプレートのテクを使ってチェックする"></a>第335章 std::bool_constant やテンプレートのテクを使ってチェックする</h2></div></div></div><p>C++17 から <a class="link" href="ch270s01.html" title="270.1. std::bool_constant ( C++17 )">std::bool_constant</a> というメタ関数にありがちな型をテンプレにしたものが導入されました。</p><p>これをメタ関数で使うと理解が深まりそうなので、特に深く考えずにメタ関数の機能のチェックとして使ってみましょうかね。</p><div class="note" style="margin-left: 0; margin-right: 10%;"><h3 class="title">注記</h3><p>マクロについては <a class="link" href="ch36.html" title="第36章 クロスコンパイルのための組み込みマクロ">クロスコンパイルのための組み込みマクロ</a> を参照くださいね。</p></div><p><strong>main.cpp. </strong>
+</p><pre xmlns="" class="prettyprint">  1 #if __cplusplus != 201703L
+  2 #  pragma message "-std=c++17を指定してください"
+  3 #endif
+  4
+  5 #if defined(__GNUC__) &amp;&amp; (__GNUC__ &lt; 7)
+  6 #  ifndef __clang__
+  7 #    pragma message "gccのバージョンが古いです"
+  8 #  endif
+  9 #elif defined(__clang__) &amp;&amp; (__clang_major__ &lt; 6)
+ 10 #  pragma message "clangのバージョンが古いです"
+ 11 #endif
+ 12
+ 13 #include &lt;type_traits&gt;
+ 14
+ 15 template&lt;typename... T&gt;
+ 16 struct is_same : std::false_type {};
+ 17
+ 18 template&lt;typename T&gt;
+ 19 struct is_same&lt;T,T&gt; : std::true_type {};
+ 20
+ 21 static_assert(
+ 22   is_same&lt;std::bool_constant&lt;true&gt;,
+ 23   typename std::disjunction&lt;std::bool_constant&lt;true&gt;&gt;::type&gt;::value
+ 24 );
+ 25
+ 26 static_assert(
+ 27   is_same&lt;std::bool_constant&lt;false&gt;,
+ 28   typename std::disjunction&lt;std::bool_constant&lt;false&gt;&gt;::type&gt;::value
+ 29 );
+ 30
+ 31 int main(){}</pre><p>
+</p><p>まずひとつ目のテンプレートテクニックです。</p><pre xmlns="" class="prettyprint"> 15 template&lt;typename... T&gt;
+ 16 struct is_same : std::false_type {};
+ 17
+ 18 template&lt;typename T&gt;
+ 19 struct is_same&lt;T,T&gt; : std::true_type {};</pre><p>この is_same は std::is_same と同じような機能を持ちます。</p><p>基本的には 2 つの T の型が同じなら std::true_type を継承し、それ以外は std::false_type を継承します。</p><p>もうひとつのテクニックは std::bool_constant です。</p><p>これは単に true か false の値をもつためのラップ型なので std::disjunction の引数に指定が可能です。</p><pre xmlns="" class="prettyprint"> 21 static_assert(
+ 22   is_same&lt;std::bool_constant&lt;true&gt;,
+ 23   typename std::disjunction&lt;std::bool_constant&lt;true&gt;&gt;::type&gt;::value
+ 24 );
+ 25
+ 26 static_assert(
+ 27   is_same&lt;std::bool_constant&lt;false&gt;,
+ 28   typename std::disjunction&lt;std::bool_constant&lt;false&gt;&gt;::type&gt;::value
+ 29 );</pre><p>この場面では std::bool_constant&lt;true&gt; と std::disjunction&lt;std::bool_constant&lt;false&gt;&gt;::type が同じという結果になってます。</p></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="pt53.html">戻る</a> </td><td width="20%" align="center"><a accesskey="u" href="pt53.html">上に戻る</a></td><td width="40%" align="right"> <a accesskey="n" href="ch336.html">次へ</a></td></tr><tr><td width="40%" align="left" valign="top"> </td><td width="20%" align="center"><a accesskey="h" href="index.html">ホーム</a></td><td width="40%" align="right" valign="top"> </td></tr></table></div><wrapper xmlns=""><p>Copyright 2017-2018, by Masaki Komatsu</p>
+
+</wrapper></body></html>
